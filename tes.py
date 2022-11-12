@@ -1,28 +1,44 @@
 import numpy as np
-import sys
+
 import cv2 as cv
 
 input_rtsp = "rtsp://externo:0QbRoF7Xyuka@186.208.217.215:64554/cam/realmonitor?channel=1&subtype=1"
-input_rtspA = "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mp4"
+input_rtspA = "rtsp://externo:0QbRoF7Xyuka@186.208.217.215:64554/cam/realmonitor?channel=1&subtype=1"
+
 vcap = cv.VideoCapture(input_rtsp)
 vcapa = cv.VideoCapture(input_rtspA)
 #vcapb = cv.VideoCapture(input_rtspA)
 #vcapc = cv.VideoCapture(input_rtsp)
+vcap.set(cv.CAP_PROP_BUFFERSIZE,3)
+vcap.set(cv.CAP_PROP_FPS,1/60)
+
+
+
+screenWidth = 720
+screenHeight = 480
+img = np.zeros((screenHeight,screenWidth,3),np.uint8)
+cv.imshow('VIDEO',img)
+cv.setWindowProperty('VIDEO',cv.WND_PROP_FULLSCREEN,cv.WINDOW_FULLSCREEN)
+
+ret, frame = vcap.read()
+reta, framea = vcapa.read()
+    #print(vcap)
+small = cv.resize(frame,(screenWidth//2,screenHeight//2),interpolation=cv.INTER_AREA)
+smalla = cv.resize(framea,(screenWidth//2,screenHeight//2),interpolation=cv.INTER_AREA)
+    
 while(1):
+  
     ret, frame = vcap.read()
     reta, framea = vcapa.read()
-    print(vcap)
-    small = cv.resize(frame,(640,360),interpolation=cv.INTER_AREA)
-    smalla = cv.resize(framea,(640,360),interpolation=cv.INTER_AREA)
-    img = np.zeros((720,1280,3),np.uint8)
-    print(img.shape)
-    img[0:360  ,0:640] = small
-    img[0:360,640:1280] = smalla
-    img[360:720,0:640] = smalla
-    img[360:720,640:1280] = small
+    #print(img.shape)
+    small = cv.resize(frame,(screenWidth//2,screenHeight//2),interpolation=cv.INTER_AREA)
+    smalla = cv.resize(framea,(screenWidth//2,screenHeight//2),interpolation=cv.INTER_AREA)
+    img[0:screenHeight//2  ,0:screenWidth//2] = small
+    img[0:screenHeight//2,screenWidth//2:screenWidth] = smalla
+    img[screenHeight//2:screenHeight,0:screenWidth//2] = smalla
+    img[screenHeight//2:screenHeight,screenWidth//2:screenWidth] = small
   
     cv.imshow('VIDEO', img)
-    cv.setWindowProperty('VIDEO',cv.WND_PROP_FULLSCREEN,cv.WINDOW_FULLSCREEN)
     if cv.waitKey(1) == ord('q'):
         break
 vcap.release()
