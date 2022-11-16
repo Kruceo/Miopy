@@ -44,8 +44,8 @@ def myTask():
 
 print(vcap.get(cv.CAP_PROP_FPS))
 
-screenWidth = 1280*0.75c
-screenHeight = 720*0.75
+screenWidth = 1280
+screenHeight = 720
 img = np.zeros((screenHeight,screenWidth,3),np.uint8)
 
 cv.imshow('VIDEO',img)
