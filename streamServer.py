@@ -5,20 +5,31 @@ import threading
 import numpy as np
 import subprocess
 
-
+streamCaptures = []
+cols = 3
+rows = 3
 config = open('config.cfg','r').read()
 #print(config)
 lines = config.split('\n')
 #print(lines)
+
 for line in lines:
     print(line)
-    if line.startswith('stream'):
+    if line.startswith('stream:'):
         streamUrl = line.replace('stream:','',1)
         print(streamUrl)
-    
+        streamCaptures.insert(0,cv2.VideoCapture(streamUrl))
+    if line.startswith('cols:'):
+        cols = int(line.replace('cols:','',1))
+        print(cols)
+    if line.startswith('rows:'):
+      
+        rows = int(line.replace('rows:','',1))
+        print(rows)
+        
+print(streamCaptures)
 time.sleep(1)
-cols = 3
-rows = 3
+
 
 app = Flask('hello')
 t1 = time.time()
@@ -26,11 +37,13 @@ t1 = time.time()
 
 
 camera = cv2.VideoCapture('rtsp://externo:0QbRoF7Xyuka@186.208.217.215:64554/cam/realmonitor?channel=1&subtype=0') 
+
+    
 camera.set(cv2.CAP_PROP_FPS,5)
 print("stream connect = "+str(time.time()- t1))
 success,frame = camera.read()
-screenWidth = 1920
-screenHeight = 1080
+screenWidth = 1280
+screenHeight = 720
 
 def get_frames():
     coefCols = screenWidth//cols
@@ -43,7 +56,7 @@ def get_frames():
     print("stream read = "+str(time.time()- t1))
     t1 = time.time()
     small = cv2.resize(rawframe,(screenWidth//cols,screenHeight//cols),interpolation=cv2.INTER_LINEAR)
-    smalla = cv2.resize(rawframe,(screenWidth//cols,screenHeight//cols),interpolation=cv2.INTER_LINEAR)
+    #smalla = cv2.resize(rawframe,(screenWidth//cols,screenHeight//cols),interpolation=cv2.INTER_LINEAR)
     print("resize smalls = "+str(time.time()- t1))
     t1 = time.time()
     x = 0
@@ -67,16 +80,26 @@ def get_frames():
     print()
    
     while True:
-        
-        img = np.zeros((screenHeight,screenWidth,3),np.uint8)
-        success, rawframe = camera.read()
-        small = cv2.resize(rawframe,(coefCols,coefRows),interpolation=cv2.INTER_LINEAR)
+        successes,frames = [],[]
+        for cam in streamCaptures:
+            s,f = cam.read()
+            img = np.zeros((screenHeight,screenWidth,3),np.uint8)
+            small = cv2.resize(f,(coefCols,coefRows),interpolation=cv2.INTER_LINEAR)
+            successes.insert(0,s)
+            frames.insert(0,small)
         x = 0
         y = 0
-        
+        z = 0
         for x in range(rows):
+            if z >= len(frames):
+                    break
             for y in range(cols):
-                img[x*coefRows:(x+1)*coefRows     ,     y*coefCols:(y+1)*coefCols] = small
+                       
+                img[x*coefRows:(x+1)*coefRows     ,     y*coefCols:(y+1)*coefCols] = frames[z]
+                z += 1 
+                if z >= len(frames):
+                    break
+            
         frame = img
 
 def generate():
@@ -93,7 +116,7 @@ def generate():
         #print(time.time() - t1)
         yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
             bytearray(encodedImage) + b'\r\n')   
-        time.sleep(1/24)
+        time.sleep(1/30)
        
 @app.route("/")
 def index():
