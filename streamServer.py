@@ -5,6 +5,18 @@ import threading
 import numpy as np
 import subprocess
 
+
+config = open('config.cfg','r').read()
+#print(config)
+lines = config.split('\n')
+#print(lines)
+for line in lines:
+    print(line)
+    if line.startswith('stream'):
+        streamUrl = line.replace('stream:','',1)
+        print(streamUrl)
+    
+time.sleep(1)
 cols = 3
 rows = 3
 
@@ -14,13 +26,15 @@ t1 = time.time()
 
 
 camera = cv2.VideoCapture('rtsp://externo:0QbRoF7Xyuka@186.208.217.215:64554/cam/realmonitor?channel=1&subtype=0') 
+camera.set(cv2.CAP_PROP_FPS,5)
 print("stream connect = "+str(time.time()- t1))
 success,frame = camera.read()
-screenWidth = 1280  
-screenHeight = 720
+screenWidth = 1920
+screenHeight = 1080
 
 def get_frames():
-   
+    coefCols = screenWidth//cols
+    coefRows = screenHeight//rows
     t2 = time.time()
     global frame, success
     t1 = time.time()
@@ -32,10 +46,14 @@ def get_frames():
     smalla = cv2.resize(rawframe,(screenWidth//cols,screenHeight//cols),interpolation=cv2.INTER_LINEAR)
     print("resize smalls = "+str(time.time()- t1))
     t1 = time.time()
-    img[0:screenHeight//cols  ,0:screenWidth//cols] = small
-    #img[0:screenHeight//cols,screenWidth//cols:screenWidth] = smalla
-    #img[screenHeight//cols:screenHeight,0:screenWidth//cols] = smalla
-    #img[screenHeight//cols:screenHeight,screenWidth//cols:screenWidth] = small
+    x = 0
+    y = 0
+        
+    for x in range(rows):
+        for y in range(cols):
+            #print(x,y)
+            #print(y*coefCols,(y+1)*coefCols)
+            img[x*coefRows:(x+1)*coefRows,y*coefCols:(y+1)*coefCols] = small
     print("img mosaic = "+str(time.time()- t1))
     t1 = time.time()
     img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
@@ -47,60 +65,36 @@ def get_frames():
     print("total = "+str(time.time()- t2))
     # p2.communicate(frame.tobytes())
     print()
-    coefCols = screenWidth//cols
-    coefRows = screenHeight//rows
+   
     while True:
         
         img = np.zeros((screenHeight,screenWidth,3),np.uint8)
         success, rawframe = camera.read()
-        #rawframe = cv2.resize(rawframe,(720,480),interpolation=cv2.INTER_LINEAR)
         small = cv2.resize(rawframe,(coefCols,coefRows),interpolation=cv2.INTER_LINEAR)
-        #smalla = cv2.resize(rawframe,(screenWidth//cols,screenHeight//rows),interpolation=cv2.INTER_LINEAR)
         x = 0
         y = 0
         
         for x in range(rows):
             for y in range(cols):
-                #print(x,y)
-                #print(y*coefCols,(y+1)*coefCols)
                 img[x*coefRows:(x+1)*coefRows     ,     y*coefCols:(y+1)*coefCols] = small
-                
-        img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-        #ret, buffer = cv2.imencode('.jpeg', small)
-            
         frame = img
-        #frameByte = img.tobytes()
-        
-        #frame = frameByte
-        t1 = time.time()
-        #time.sleep(1/30)
-        #p2.communicate(input=frame)
-        
-        #print((time.time() - t1))
-        #f.truncate(0)
-        #f = open('video.yuv','wb')
-        #f.write(frame)
-        #f.close()
-        
-       
-        #sys.stdout.buffer.write(frame)
+
 def generate():
-    # grab global references to the output frame and lock variables
     global frame, lock
-    # loop over frames from the output stream
     while True:
         t1 = time.time()
         if frame is None:
             continue
         
         (flag, encodedImage) = cv2.imencode(".jpg", frame)
+        cv2.imwrite('test.jpg',encodedImage)
         if not flag:
             continue
-        print(time.time() - t1)
+        #print(time.time() - t1)
         yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
             bytearray(encodedImage) + b'\r\n')   
-        time.sleep(1/30)
-       # print(time.time())
+        time.sleep(1/24)
+       
 @app.route("/")
 def index():
 	# return the response generated along with the specific media
@@ -117,4 +111,3 @@ cameraThread.start()
 app.run('0.0.0.0',9921)
 p2 = subprocess.Popen(["cvlc","http://127.0.0.1:9921/ "],stdout=subprocess.PIPE,stdin=subprocess.PIPE)
 
-time.sleep(1)
